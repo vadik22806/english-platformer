@@ -8,7 +8,7 @@ import time
 # --------------------------------
 SCREEN_WIDTH = 1400
 SCREEN_HEIGHT = 700
-SCREEN_TITLE = "English Platformer — Урок 160 (Обучение английскому)"
+SCREEN_TITLE = "English Platformer — Урок 13 (Обучение английскому)"
 
 # Игрок
 PLAYER_SCALE = 1.0
