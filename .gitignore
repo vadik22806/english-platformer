@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+env.bak/
+venv.bak/
+
+# PyCharm - ВАЖНО! Игнорируем .idea
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code - можно оставить или игнорировать
+.vscode/
+
+# Файлы с данными и конфигурацией
+*.csv
+*.json
+*.db
+*.sqlite
+
+# Временные файлы
+*.tmp
+*.temp
+
+# Операционные системы
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Файлы с паролями, ключами
+*.key
+*.pem
+*.secret
+config.py
+secrets.py
+
+# Логи
+*.log
+*.log.*
+
+# Игнорируем тестовые файлы
+test_*.py
+
+# Но НЕ игнорируем:
+!main.py
+!requirements.txt
