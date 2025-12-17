@@ -6,7 +6,7 @@ import time
 # --------------------------------
 # Конфигурация
 # --------------------------------
-SCREEN_WIDTH = 1400
+SCREEN_WIDTH = 1500
 SCREEN_HEIGHT = 700
 SCREEN_TITLE = "English Platformer — Урок 13 (Обучение английскому)"
 
