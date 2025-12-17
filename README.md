@@ -47,7 +47,6 @@ english-platformer/
 │   └── images/         # Game graphics
 │       ├── player.png  # Player sprite
 │       └── background.png # Background image
-└── vocab.csv          # Vocabulary for learning
 ```
 
 ## 📋 Requirements
