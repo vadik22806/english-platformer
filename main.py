@@ -1,5 +1,9 @@
 import arcade
 import os
+# Указываем Arcade использовать более старую, но совместимую версию OpenGL
+os.environ['ARCADE_OPENGL_VERSION'] = '3.2'
+# Отключаем использование специального окна для отладки OpenGL
+os.environ['PYGLET_SHADOW_WINDOW'] = '0'
 import random
 import time
 import sys
@@ -49,16 +53,28 @@ SPIKES_MAX_COUNT = 6
 SPIKE_WIDTH = 40
 SPIKE_HEIGHT = 40
 
-# Пути к ассетам
-BASE_DIR = os.path.dirname(
-    sys.executable if getattr(sys, "frozen", False)
-    else os.path.abspath(__file__)
-)
+if getattr(sys, 'frozen', False):
+    # Режим EXE
+    if hasattr(sys, '_MEIPASS'):
+        # onefile режим - ресурсы во временной папке
+        BASE_DIR = sys._MEIPASS
+        print(f"[ONE] BASE_DIR: {BASE_DIR}")
+    else:
+        # folder режим - ресурсы рядом с EXE
+        BASE_DIR = os.path.dirname(sys.executable)
+        print(f"[EXE] BASE_DIR: {BASE_DIR}")
+else:
+    # Режим скрипта
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    print(f"[SCRIPT] BASE_DIR: {BASE_DIR}")
 
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 IMAGES_DIR = os.path.join(ASSETS_DIR, "images")
 PLAYER_IMAGE_PATH = os.path.join(IMAGES_DIR, "player.png")
 BACKGROUND_IMAGE_PATH = os.path.join(IMAGES_DIR, "background.png")
+
+print(f"PLAYER_IMAGE_PATH: {PLAYER_IMAGE_PATH}")
+print(f"Exists: {os.path.exists(PLAYER_IMAGE_PATH)}")
 
 class Platform(arcade.Sprite):
     """Класс платформы для оптимизации"""
@@ -336,19 +352,12 @@ class MyGame(arcade.Window):
             self.background_list = None
 
         # Создаем игрока
-        if os.path.exists(PLAYER_IMAGE_PATH):
-            try:
-                self.player_sprite = arcade.Sprite(PLAYER_IMAGE_PATH, scale=0.125)
-            except Exception as e:
-                self.player_sprite = arcade.Sprite(
-                    ":resources:images/animated_characters/female_person/femalePerson_idle.png",
-                    scale=PLAYER_SCALE,
-                )
-        else:
-            self.player_sprite = arcade.Sprite(
-                ":resources:images/animated_characters/female_person/femalePerson_idle.png",
-                scale=PLAYER_SCALE,
-            )
+        try:
+            self.player_sprite = arcade.Sprite(PLAYER_IMAGE_PATH, scale=0.125)
+        except Exception as e:
+            # Если картинка не загружается, создаём цветной квадрат
+            print(f"Ошибка загрузки player.png: {e}")
+            self.player_sprite = arcade.SpriteSolidColor(50, 100, arcade.color.BLUE)
 
         # Стартовая позиция игрока
         self.player_sprite.center_x = 128
