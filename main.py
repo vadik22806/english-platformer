@@ -2,13 +2,14 @@ import arcade
 import os
 import random
 import time
+import sys
 
 # --------------------------------
 # Конфигурация
 # --------------------------------
 SCREEN_WIDTH = 1400
 SCREEN_HEIGHT = 700
-SCREEN_TITLE = "English Platformer — Урок 12 (Обучение английскому)"
+SCREEN_TITLE = "English Platformer — Урок 13 (Обучение английскому)"
 
 # Игрок
 PLAYER_SCALE = 1.0
@@ -49,11 +50,15 @@ SPIKE_WIDTH = 40
 SPIKE_HEIGHT = 40
 
 # Пути к ассетам
-ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
+BASE_DIR = os.path.dirname(
+    sys.executable if getattr(sys, "frozen", False)
+    else os.path.abspath(__file__)
+)
+
+ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 IMAGES_DIR = os.path.join(ASSETS_DIR, "images")
 PLAYER_IMAGE_PATH = os.path.join(IMAGES_DIR, "player.png")
 BACKGROUND_IMAGE_PATH = os.path.join(IMAGES_DIR, "background.png")
-
 
 class Platform(arcade.Sprite):
     """Класс платформы для оптимизации"""
@@ -139,9 +144,9 @@ class MyGame(arcade.Window):
 
         # Цены бонусов
         self.BONUS_PRICES = {
-            "speed": 0,  # ускорение
-            "jump": 0,  # усиление прыжка
-            "shield": 0  # щит
+            "speed": 2,  # ускорение
+            "jump": 3,  # усиление прыжка
+            "shield": 5  # щит
         }
 
         # Бонусные эффекты
@@ -785,21 +790,21 @@ class MyGame(arcade.Window):
 
         # Ускорение (клавиша 1)
         arcade.draw_text(
-            "Клавиша 1 - Ускорение (5 монет)",
+            "Клавиша 1 - Ускорение (2 монет)",
             bonus_x, bonus_y - 40,
             arcade.color.GREEN, 14
         )
 
         # Усиление прыжка (клавиша 2)
         arcade.draw_text(
-            "Клавиша 2 - Усиление прыжка (10 монет)",
+            "Клавиша 2 - Усиление прыжка (3 монет)",
             bonus_x, bonus_y - 70,
             arcade.color.GREEN, 14
         )
 
         # Щит (клавиша 3)
         arcade.draw_text(
-            "Клавиша 3 - Щит (15 монет)",
+            "Клавиша 3 - Щит (5 монет)",
             bonus_x, bonus_y - 100,
             arcade.color.GREEN, 14
         )
@@ -1659,7 +1664,6 @@ class MyGame(arcade.Window):
 # Запуск игры
 # --------------------------------
 def main():
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     window = MyGame(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
     window.setup()
     arcade.run()
