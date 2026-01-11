@@ -13,7 +13,7 @@ import sys
 # --------------------------------
 SCREEN_WIDTH = 1400
 SCREEN_HEIGHT = 700
-SCREEN_TITLE = "English Platformer — Урок 13 (Обучение английскому)"
+SCREEN_TITLE = "English Platformer — Урок 14 (Обучение английскому)"
 
 # Игрок
 PLAYER_SCALE = 1.0
@@ -28,10 +28,10 @@ PLATFORM_MIN_GAP = 100
 PLATFORM_MAX_GAP = 260
 PLATFORM_MIN_Y = 120
 PLATFORM_MAX_Y = 480
-PLATFORM_MIN_WIDTH = 60
-PLATFORM_MAX_WIDTH = 250
+PLATFORM_MIN_WIDTH = 115    # ← РАЗМЕР ФИЗИЧЕСКОЙ ПЛАТФОРМЫ (любой)
+PLATFORM_MAX_WIDTH = 115    # ← ОДИНАКОВЫЙ
+PLATFORM_HEIGHT = 30        # ← ВЫСОТА ФИЗИЧЕСКОЙ ПЛАТФОРМЫ
 SPAWN_BUFFER = 600
-
 # Переход между уровнями
 LEVEL_1_END = 5000
 LEVEL_2_START = 5050
@@ -76,17 +76,52 @@ BACKGROUND_IMAGE_PATH = os.path.join(IMAGES_DIR, "background.png")
 print(f"PLAYER_IMAGE_PATH: {PLAYER_IMAGE_PATH}")
 print(f"Exists: {os.path.exists(PLAYER_IMAGE_PATH)}")
 
-class Platform(arcade.Sprite):
-    """Класс платформы для оптимизации"""
 
-    def __init__(self, x, y, width, height, color):
-        super().__init__()
+class Platform(arcade.Sprite):
+    """Класс платформы с текстурой"""
+
+    def __init__(self, x, y, width, height, color, use_texture=True):
+        # Пытаемся загрузить текстуру
+        stone_path = os.path.join(IMAGES_DIR, "platform_stone.png")
+
+        if use_texture and os.path.exists(stone_path):
+            try:
+                # Инициализируем спрайт с текстурой
+                super().__init__(stone_path)
+
+                # Устанавливаем физические размеры
+                self._width = width
+                self._height = height
+
+                # 🔥 УБИРАЕМ МАСШТАБИРОВАНИЕ - если текстура уже 160x30
+                self.scale = 0.1
+                self.has_texture = True
+
+            except Exception as e:
+                print(f"Ошибка загрузки platform_stone.png: {e}")
+                super().__init__()
+                self.color = color
+                self.has_texture = False
+                self._width = width
+                self._height = height
+        else:
+            # Для пола или без текстуры
+            super().__init__()
+            self.color = color
+            self.has_texture = False
+            self._width = width
+            self._height = height
+
         self.center_x = x
         self.center_y = y
-        self.width = width
-        self.height = height
-        self.color = color
 
+    @property
+    def width(self):
+        return self._width
+
+    @property
+    def height(self):
+        return self._height
 
 class Coin(arcade.Sprite):
     """Класс монетки"""
@@ -133,6 +168,8 @@ class MyGame(arcade.Window):
         self.letters_list = None
         self.spikes_list = None
         self.background_list = None
+        # Отладочный режим - показывать границы платформ
+        self.debug_mode = False  # Переключите на False чтобы выключить
 
         # Игрок и физика
         self.player_sprite = None
@@ -374,151 +411,166 @@ class MyGame(arcade.Window):
 
     def create_initial_platforms(self):
         """Создает только минимальные стартовые платформы"""
+        # Используем глобальные константы, не создавая локальных с таким же именем
+        platform_width = PLATFORM_MIN_WIDTH  # ← локальная переменная
+        platform_height = PLATFORM_HEIGHT  # ← локальная переменная (маленькая буква)
+        floor_height = 40
+
         if self.current_level == 1:
-            # Пол первого уровня
+            # Пол первого уровня - БЕЗ ТЕКСТУРЫ
             floor_end = LEVEL_1_END - 500
             floor_center_x = floor_end // 2
 
-            # Физическая платформа
-            physics_sprite = arcade.SpriteSolidColor(floor_end, 40, arcade.color.TRANSPARENT_BLACK)
+            # Физическая платформа для пола
+            physics_sprite = arcade.SpriteSolidColor(floor_end, floor_height, arcade.color.TRANSPARENT_BLACK)
             physics_sprite.center_x = floor_center_x
             physics_sprite.center_y = 20
             self.wall_list.append(physics_sprite)
 
-            # Визуальная платформа
-            platform_visual = Platform(floor_center_x, 20, floor_end, 40, arcade.color.DARK_SLATE_GRAY)
+            # Визуальная платформа - ПОЛ (use_texture=False)
+            platform_visual = Platform(floor_center_x, 20, floor_end, floor_height,
+                                       arcade.color.GRAY, use_texture=False)
             self.platform_visual_list.append(platform_visual)
 
-            # Стартовая платформа для игрока
+            # Стартовая платформа для игрока - С ТЕКСТУРОЙ
             start_x = 200
             start_y = 180
-            start_width = 160
 
-            physics_sprite = arcade.SpriteSolidColor(start_width, 20, arcade.color.TRANSPARENT_BLACK)
+            physics_sprite = arcade.SpriteSolidColor(platform_width, platform_height,
+                                                     arcade.color.TRANSPARENT_BLACK)
             physics_sprite.center_x = start_x
             physics_sprite.center_y = start_y
             self.wall_list.append(physics_sprite)
 
-            platform_visual = Platform(start_x, start_y, start_width, 20, arcade.color.DARK_GREEN)
+            platform_visual = Platform(start_x, start_y, platform_width, platform_height,
+                                       arcade.color.DARK_GREEN, use_texture=True)
             self.platform_visual_list.append(platform_visual)
 
-            self.max_spawn_x = start_x + start_width // 2
+            self.max_spawn_x = start_x + platform_width // 2
 
         elif self.current_level == 2:
-            # Пол второго уровня
+            # Пол второго уровня - БЕЗ ТЕКСТУРЫ
             floor_width = LEVEL_2_END - LEVEL_2_START
             floor_center_x = LEVEL_2_START + floor_width // 2
 
             # Пол
-            physics_sprite = arcade.SpriteSolidColor(floor_width, 40, arcade.color.TRANSPARENT_BLACK)
+            physics_sprite = arcade.SpriteSolidColor(floor_width, floor_height, arcade.color.TRANSPARENT_BLACK)
             physics_sprite.center_x = floor_center_x
             physics_sprite.center_y = 20
             self.wall_list.append(physics_sprite)
 
-            platform_visual = Platform(floor_center_x, 20, floor_width, 40, arcade.color.DARK_SLATE_GRAY)
+            platform_visual = Platform(floor_center_x, 20, floor_width, floor_height,
+                                       arcade.color.GRAY, use_texture=False)
             self.platform_visual_list.append(platform_visual)
 
-            # Первая платформа
+            # Первая платформа - С ТЕКСТУРОЙ
             first_x = LEVEL_2_START + 200
             first_y = 300
-            first_width = 160
 
-            physics_sprite = arcade.SpriteSolidColor(first_width, 20, arcade.color.TRANSPARENT_BLACK)
+            physics_sprite = arcade.SpriteSolidColor(platform_width, platform_height,
+                                                     arcade.color.TRANSPARENT_BLACK)
             physics_sprite.center_x = first_x
             physics_sprite.center_y = first_y
             self.wall_list.append(physics_sprite)
 
-            platform_visual = Platform(first_x, first_y, first_width, 20, arcade.color.DARK_GREEN)
+            platform_visual = Platform(first_x, first_y, platform_width, platform_height,
+                                       arcade.color.DARK_GREEN, use_texture=True)
             self.platform_visual_list.append(platform_visual)
 
-            self.max_spawn_x = first_x + first_width // 2
+            self.max_spawn_x = first_x + platform_width // 2
 
         elif self.current_level == 3:
-            # Пол третьего уровня
+            # Пол третьего уровня - БЕЗ ТЕКСТУРЫ
             floor_width = LEVEL_3_END - LEVEL_3_START
             floor_center_x = LEVEL_3_START + floor_width // 2
 
             # Пол
-            physics_sprite = arcade.SpriteSolidColor(floor_width, 40, arcade.color.TRANSPARENT_BLACK)
+            physics_sprite = arcade.SpriteSolidColor(floor_width, floor_height, arcade.color.TRANSPARENT_BLACK)
             physics_sprite.center_x = floor_center_x
             physics_sprite.center_y = 20
             self.wall_list.append(physics_sprite)
 
-            platform_visual = Platform(floor_center_x, 20, floor_width, 40, arcade.color.DARK_SLATE_GRAY)
+            platform_visual = Platform(floor_center_x, 20, floor_width, floor_height,
+                                       arcade.color.GRAY, use_texture=False)
             self.platform_visual_list.append(platform_visual)
 
-            # Первая платформа
+            # Первая платформа - С ТЕКСТУРОЙ
             first_x = LEVEL_3_START + 200
             first_y = 400
-            first_width = 160
 
-            physics_sprite = arcade.SpriteSolidColor(first_width, 20, arcade.color.TRANSPARENT_BLACK)
+            physics_sprite = arcade.SpriteSolidColor(platform_width, platform_height,
+                                                     arcade.color.TRANSPARENT_BLACK)
             physics_sprite.center_x = first_x
             physics_sprite.center_y = first_y
             self.wall_list.append(physics_sprite)
 
-            platform_visual = Platform(first_x, first_y, first_width, 20, arcade.color.DARK_GREEN)
+            platform_visual = Platform(first_x, first_y, platform_width, platform_height,
+                                       arcade.color.DARK_GREEN, use_texture=True)
             self.platform_visual_list.append(platform_visual)
 
-            self.max_spawn_x = first_x + first_width // 2
+            self.max_spawn_x = first_x + platform_width // 2
 
         elif self.current_level == 4:
-            # Пол четвертого уровня
+            # Пол четвертого уровня - БЕЗ ТЕКСТУРЫ
             floor_width = LEVEL_4_END - LEVEL_4_START
             floor_center_x = LEVEL_4_START + floor_width // 2
 
             # Пол
-            physics_sprite = arcade.SpriteSolidColor(floor_width, 40, arcade.color.TRANSPARENT_BLACK)
+            physics_sprite = arcade.SpriteSolidColor(floor_width, floor_height, arcade.color.TRANSPARENT_BLACK)
             physics_sprite.center_x = floor_center_x
             physics_sprite.center_y = 20
             self.wall_list.append(physics_sprite)
 
-            platform_visual = Platform(floor_center_x, 20, floor_width, 40, arcade.color.DARK_SLATE_GRAY)
+            platform_visual = Platform(floor_center_x, 20, floor_width, floor_height,
+                                       arcade.color.GRAY, use_texture=False)
             self.platform_visual_list.append(platform_visual)
 
-            # Первая платформа
+            # Первая платформа - С ТЕКСТУРОЙ
             first_x = LEVEL_4_START + 200
             first_y = 400
-            first_width = 160
 
-            physics_sprite = arcade.SpriteSolidColor(first_width, 20, arcade.color.TRANSPARENT_BLACK)
+            physics_sprite = arcade.SpriteSolidColor(platform_width, platform_height,
+                                                     arcade.color.TRANSPARENT_BLACK)
             physics_sprite.center_x = first_x
             physics_sprite.center_y = first_y
             self.wall_list.append(physics_sprite)
 
-            platform_visual = Platform(first_x, first_y, first_width, 20, arcade.color.DARK_GREEN)
+            platform_visual = Platform(first_x, first_y, platform_width, platform_height,
+                                       arcade.color.DARK_GREEN, use_texture=True)
             self.platform_visual_list.append(platform_visual)
 
-            self.max_spawn_x = first_x + first_width // 2
+            self.max_spawn_x = first_x + platform_width // 2
 
         else:  # Уровень 5
-            # Пол пятого уровня
+            # Пол пятого уровня - БЕЗ ТЕКСТУРЫ
             floor_width = WORLD_BOUNDARY - LEVEL_5_START
             floor_center_x = LEVEL_5_START + floor_width // 2
 
             # Пол
-            physics_sprite = arcade.SpriteSolidColor(floor_width, 40, arcade.color.TRANSPARENT_BLACK)
+            physics_sprite = arcade.SpriteSolidColor(floor_width, floor_height, arcade.color.TRANSPARENT_BLACK)
             physics_sprite.center_x = floor_center_x
             physics_sprite.center_y = 20
             self.wall_list.append(physics_sprite)
 
-            platform_visual = Platform(floor_center_x, 20, floor_width, 40, arcade.color.DARK_SLATE_GRAY)
+            platform_visual = Platform(floor_center_x, 20, floor_width, floor_height,
+                                       arcade.color.GRAY, use_texture=False)
             self.platform_visual_list.append(platform_visual)
 
-            # Первая платформа
+            # Первая платформа - С ТЕКСТУРОЙ
             first_x = LEVEL_5_START + 200
             first_y = 400
-            first_width = 160
 
-            physics_sprite = arcade.SpriteSolidColor(first_width, 20, arcade.color.TRANSPARENT_BLACK)
+            physics_sprite = arcade.SpriteSolidColor(platform_width, platform_height,
+                                                     arcade.color.TRANSPARENT_BLACK)
             physics_sprite.center_x = first_x
             physics_sprite.center_y = first_y
             self.wall_list.append(physics_sprite)
 
-            platform_visual = Platform(first_x, first_y, first_width, 20, arcade.color.DARK_GREEN)
+            platform_visual = Platform(first_x, first_y, platform_width, platform_height,
+                                       arcade.color.DARK_GREEN, use_texture=True)
             self.platform_visual_list.append(platform_visual)
 
-            self.max_spawn_x = first_x + first_width // 2
+            self.max_spawn_x = first_x + platform_width // 2
 
     def spawn_spikes_on_floor(self, start_x, count=None):
         """Создает шипы с проверкой границ"""
@@ -558,19 +610,26 @@ class MyGame(arcade.Window):
         MIN_HORIZONTAL_CLEARANCE = 8
         MIN_VERTICAL_SEPARATION = 40
 
+        # РАЗМЕРЫ ФИЗИЧЕСКОЙ ПЛАТФОРМЫ
+        PHYSICAL_WIDTH = PLATFORM_MIN_WIDTH
+        PHYSICAL_HEIGHT = PLATFORM_HEIGHT
+
         for attempt in range(MAX_ATTEMPTS):
             # Параметры зависят от уровня
             if self.current_level == 2:
                 gap = random.randint(150, 320)
-                width = random.randint(60, 200)
+                width = PHYSICAL_WIDTH
+                height = PHYSICAL_HEIGHT
                 y = random.randint(180, 550)
             elif self.current_level == 3 or self.current_level == 4 or self.current_level == 5:
                 gap = random.randint(120, 280)
-                width = random.randint(80, 220)
+                width = PHYSICAL_WIDTH
+                height = PHYSICAL_HEIGHT
                 y = random.randint(300, 600)
             else:
                 gap = random.randint(PLATFORM_MIN_GAP, PLATFORM_MAX_GAP)
-                width = random.randint(PLATFORM_MIN_WIDTH, PLATFORM_MAX_WIDTH)
+                width = PHYSICAL_WIDTH
+                height = PHYSICAL_HEIGHT
                 y = random.randint(PLATFORM_MIN_Y, PLATFORM_MAX_Y)
 
             platform_left = start_x + gap
@@ -616,13 +675,14 @@ class MyGame(arcade.Window):
             ])
 
             # Создаем физическую платформу
-            physics_sprite = arcade.SpriteSolidColor(width, 20, arcade.color.TRANSPARENT_BLACK)
+            physics_sprite = arcade.SpriteSolidColor(width, height, arcade.color.TRANSPARENT_BLACK)
             physics_sprite.center_x = platform_x
             physics_sprite.center_y = y
             self.wall_list.append(physics_sprite)
 
-            # Создаем визуальную платформу
-            platform_visual = Platform(platform_x, y, width, 20, color)
+            # Создаем визуальную платформу с текстурой
+            # Текстура будет растянута до размеров width×height
+            platform_visual = Platform(platform_x, y, width, height, color, use_texture=True)
             self.platform_visual_list.append(platform_visual)
 
             right_edge = platform_x + width // 2
@@ -1423,7 +1483,7 @@ class MyGame(arcade.Window):
                     self.completed_words.append((word, data["translation"]))
 
     def on_draw(self):
-        """Отрисовка игры - СУПЕР ОПТИМИЗИРОВАННАЯ"""
+        """Отрисовка игры"""
         self.clear()
 
         if self.is_loading:
@@ -1438,17 +1498,48 @@ class MyGame(arcade.Window):
         cam_left = self.camera_x
         cam_right = self.camera_x + SCREEN_WIDTH
 
-        # 3. ПЛАТФОРМЫ - только видимые
+        # 3. ПЛАТФОРМЫ
         for platform in self.platform_visual_list:
             plat_left = platform.center_x - platform.width // 2
             plat_right = platform.center_x + platform.width // 2
 
             if plat_right >= cam_left and plat_left <= cam_right:
-                draw_left = plat_left - self.camera_x
-                draw_right = plat_right - self.camera_x
-                bottom = platform.center_y - platform.height // 2
-                top = platform.center_y + platform.height // 2
-                arcade.draw_lrbt_rectangle_filled(draw_left, draw_right, bottom, top, platform.color)
+                if platform.has_texture:
+                    # Платформы с растянутой текстурой
+                    original_x = platform.center_x
+                    platform.center_x -= self.camera_x
+                    # Рисуем спрайт (текстура уже масштабирована в классе Platform)
+                    temp_list = arcade.SpriteList()
+                    temp_list.append(platform)
+                    temp_list.draw()
+                    platform.center_x = original_x
+                else:
+                    # Пол без текстуры
+                    draw_left = plat_left - self.camera_x
+                    draw_right = plat_right - self.camera_x
+                    bottom = platform.center_y - platform.height // 2
+                    top = platform.center_y + platform.height // 2
+                    arcade.draw_lrbt_rectangle_filled(
+                        draw_left, draw_right, bottom, top, platform.color
+                    )
+
+                # 🔥 ОТЛАДОЧНАЯ ОБВОДКА ВИЗУАЛЬНЫХ ПЛАТФОРМ
+                if self.debug_mode:
+                    draw_left = plat_left - self.camera_x
+                    draw_right = plat_right - self.camera_x
+                    bottom = platform.center_y - platform.height // 2
+                    top = platform.center_y + platform.height // 2
+
+                    # Красная обводка визуальной платформы
+                    arcade.draw_lrbt_rectangle_outline(
+                        draw_left, draw_right, bottom, top,
+                        arcade.color.RED, 2
+                    )
+
+                    # Точка в центре визуальной платформы
+                    center_x = platform.center_x - self.camera_x
+                    center_y = platform.center_y
+                    arcade.draw_circle_filled(center_x, center_y, 3, arcade.color.BLUE)
 
         # 4. ШИПЫ
         if self.current_level in [4, 5]:
@@ -1456,7 +1547,6 @@ class MyGame(arcade.Window):
                 if cam_left <= spike.center_x <= cam_right:
                     x = spike.center_x - self.camera_x
                     y = spike.center_y
-                    # 🔥 Исправлено: draw_polygon вместо draw_triangle
                     points = [
                         (x, y + SPIKE_HEIGHT // 2),
                         (x - SPIKE_WIDTH // 2, y - SPIKE_HEIGHT // 2),
@@ -1471,19 +1561,14 @@ class MyGame(arcade.Window):
                 x = coin.center_x - self.camera_x
                 arcade.draw_circle_filled(x, coin.center_y, 15, arcade.color.GOLD)
 
-        # 6. БУКВЫ - 🔥 ИСПРАВЛЕНО: полная отрисовка как раньше
+        # 6. БУКВЫ
         for letter in self.letters_list:
             if not letter.collected and cam_left <= letter.center_x <= cam_right:
                 x = letter.center_x - self.camera_x
                 y = letter.center_y
 
-                # 1. Синий круг (фон буквы)
                 arcade.draw_circle_filled(x, y, 20, arcade.color.LIGHT_BLUE)
-
-                # 2. Темно-синяя обводка
                 arcade.draw_circle_outline(x, y, 20, arcade.color.DARK_BLUE, 2)
-
-                # 3. Сама буква черная по центру
                 arcade.draw_text(
                     letter.letter.upper(),
                     x, y,
@@ -1491,15 +1576,56 @@ class MyGame(arcade.Window):
                     align="center", anchor_x="center", anchor_y="center"
                 )
 
-        # 7. ИГРОК
-        # 🔥 Исправлено: правильно работаем с камерой
+        # 7. 🔥 ОТЛАДОЧНАЯ ОБВОДКА ФИЗИЧЕСКИХ ПЛАТФОРМ (невидимые для коллизий)
+        if self.debug_mode:
+            for wall in self.wall_list:
+                wall_left = wall.center_x - wall.width // 2
+                wall_right = wall.center_x + wall.width // 2
+
+                if wall_right >= cam_left and wall_left <= cam_right:
+                    draw_left = wall_left - self.camera_x
+                    draw_right = wall_right - self.camera_x
+                    bottom = wall.center_y - wall.height // 2
+                    top = wall.center_y + wall.height // 2
+
+                    # Зеленая пунктирная линия для физических платформ
+                    arcade.draw_lrbt_rectangle_outline(
+                        draw_left, draw_right, bottom, top,
+                        arcade.color.GREEN, 2
+                    )
+
+                    # Точка в центре физической платформы
+                    center_x = wall.center_x - self.camera_x
+                    center_y = wall.center_y
+                    arcade.draw_circle_filled(center_x, center_y, 5, arcade.color.YELLOW)
+
+        # 8. ИГРОК
         for player in self.player_list:
             player.center_x -= self.camera_x
         self.player_list.draw()
         for player in self.player_list:
             player.center_x += self.camera_x
 
-        # 8. HUD
+        # 🔥 ОТЛАДОЧНАЯ ОБВОДКА ИГРОКА
+        if self.debug_mode:
+            player_x = self.player_sprite.center_x - self.camera_x
+            player_y = self.player_sprite.center_y
+            player_width = self.player_sprite.width
+            player_height = self.player_sprite.height
+
+            # Обводка игрока оранжевым цветом
+            arcade.draw_lrbt_rectangle_outline(
+                player_x - player_width // 2,
+                player_x + player_width // 2,
+                player_y - player_height // 2,
+                player_y + player_height // 2,
+                arcade.color.ORANGE, 2
+            )
+
+            # Центр игрока
+            arcade.draw_circle_filled(player_x, player_y, 4, arcade.color.MAGENTA)
+
+        # 9. HUD
         self._draw_hud()
 
     def on_update(self, delta_time):
